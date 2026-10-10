@@ -1,10 +1,12 @@
 import asyncio
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 
 from core.config import get_settings
+from core.security import require_api_key
+
 from workers.tasks import generate_weekly_videos_task
 
 router = APIRouter(
