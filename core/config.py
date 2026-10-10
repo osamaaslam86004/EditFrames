@@ -11,7 +11,7 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    app_name: str = "LangGraph Candidate Screening API"
+    app_name: str = "EditFrames Video Generation Studio"
     environment: Literal["development", "test", "staging", "production"] = "development"
     log_level: str = "INFO"
     api_key: SecretStr | None = None

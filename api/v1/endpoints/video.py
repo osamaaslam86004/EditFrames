@@ -1,10 +1,8 @@
 import asyncio
-import httpx
 import os
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from playwright.async_api import async_playwright
 
 from core.config import get_settings
 from workers.tasks import generate_weekly_videos_task
