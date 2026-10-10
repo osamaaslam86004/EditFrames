@@ -1,5 +1,6 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from core.websocket import manager
+from core.security import require_api_key
 
 router = APIRouter(
     prefix="/api/v1/progress",

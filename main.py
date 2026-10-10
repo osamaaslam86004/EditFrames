@@ -1,16 +1,19 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from config import STATIC_DIR
+from core.config import get_settings
 from core.lifespan import lifespan
-from core.scheduler import scheduler
-from api.v1.router import api, ws
+from api.v1.router import api_router as api
+from api.v1.router import ws_router as ws
+
+settings = get_settings()
+STATIC_DIR = settings.static_dir
 
 app = FastAPI(title="Production Video Studio with KittenTTS", lifespan=lifespan)
 
 app.mount("/dashboard", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 
-app.include_router(api.router, prefix="/api")
-app.include_router(ws.router, prefix="/ws")
+app.include_router(api, prefix="/api")
+app.include_router(ws, prefix="/ws")
 
 
 @app.get("/")
@@ -18,7 +21,3 @@ def root():
     return {
         "message": "KittenTTS Video Studio running. Access dashboard at http://localhost:8000/dashboard"
     }
-
-
-# Start background cron scheduler
-scheduler.start()

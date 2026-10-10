@@ -1,3 +1,3 @@
-from app.db.models.screening import Screening
+from db.models.videos_model import VideoJob
 
-__all__ = ["Screening"]
+__all__ = ["VideoJob"]

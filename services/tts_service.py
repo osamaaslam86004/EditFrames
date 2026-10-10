@@ -2,8 +2,11 @@ import os
 import subprocess
 import torch
 import soundfile as sf
-from core.config import VIDEOS_DIR
+from core.config import get_settings
 from core.lifespan import models
+
+settings = get_settings()
+VIDEOS_DIR = settings.videos_dir
 
 
 def get_audio_duration(file_path: str) -> float:
