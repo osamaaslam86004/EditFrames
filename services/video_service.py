@@ -12,6 +12,13 @@ VIDEOS_DIR = settings.videos_dir
 BASE_DIR = settings.base_dir
 TEMPLATE_PATH = settings.template_path
 
+# Add aspect ratio dimension mapping inside services/video_service.py
+ASPECT_RATIO_DIMENSIONS = {
+    "9:16": {"width": 1080, "height": 1920},
+    "1:1": {"width": 1080, "height": 1080},
+    "16:9": {"width": 1920, "height": 1080},
+}
+
 
 def overlay_audio_to_video(video_path: str, audio_path: str, output_path: str):
     cmd = [
@@ -44,43 +51,52 @@ def cleanup_old_videos():
             os.remove(file_path)
 
 
-async def render_product_video(product: dict, browser, idx: int, total: int):
+async def render_product_video(
+    product: dict, browser, idx: int, total: int, aspect_ratio: str = "9:16"
+):
+
+    # 1. Resolve dimensions based on requested aspect ratio
+    dims = ASPECT_RATIO_DIMENSIONS.get(aspect_ratio, ASPECT_RATIO_DIMENSIONS["9:16"])
+    width, height = dims["width"], dims["height"]
+
     category = product.get("category", "general")
 
     await manager.broadcast(
-        f"[{idx}/{total}] Generating LLM script & synthesizing voice ({category}) and & subtitle timings..."
+        f"[{idx}/{total}] Generating LLM script & synthesizing voice ({category}) and & subtitle timings... for format {aspect_ratio}"
     )
 
-    # # 1. Synthesize voiceover and get script text & audio duration
+    # 2. Synthesize voiceover and get script text & audio duration
     wav_path, voice_persona, audio_duration, script_text = synthesize_voiceover(product)
     record_duration_ms = int((audio_duration + 1.0) * 1000)
 
-    # 2. Generate karaoke subtitle HTML spans
+    # 3. Generate karaoke subtitle HTML spans
     subtitles_html = generate_subtitle_html(script_text, audio_duration)
 
     await manager.broadcast(
-        f"[{idx}/{total}] Recording video with voice persona '{voice_persona}' and animated subtitles ({audio_duration:.1f}s)..."
+        f"[{idx}/{total}] Recording {aspect_ratio} video with voice persona '{voice_persona}' and animated subtitles ({audio_duration:.1f}s)..."
     )
 
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         html_template = f.read()
 
-    # 3. Inject product details and subtitle spans into template
+    # 4. Inject product details and subtitle spans into template
     rendered_html = (
         html_template.replace("{{PRODUCT_TITLE}}", product["title"])
         .replace("{{PRICE}}", str(product["price"]))
         .replace("{{IMAGE_URL}}", product["image"])
         .replace("{{SUBTITLES_HTML}}", subtitles_html)
+        .replace("{{ASPECT_RATIO_CLASS}}", f"ratio-{aspect_ratio.replace(':', '-')}")
     )
 
     temp_html_path = os.path.join(BASE_DIR, f"temp_{product['id']}.html")
     with open(temp_html_path, "w", encoding="utf-8") as f:
         f.write(rendered_html)
 
+    # 5. Configure Playwright context with dynamic dimensions
     context = await browser.new_context(
-        viewport={"width": 1080, "height": 1920},
+        viewport={"width": width, "height": height},
         record_video_dir=VIDEOS_DIR,
-        record_video_size={"width": 1080, "height": 1920},
+        record_video_size={"width": width, "height": height},
     )
 
     page = await context.new_page()
@@ -101,5 +117,5 @@ async def render_product_video(product: dict, browser, idx: int, total: int):
             os.remove(pth)
 
     await manager.broadcast(
-        f"✅ Created video with voiceover: product_{product['id']}.mp4"
+        f" Created {aspect_ratio} video with voiceover: product_{product['id']}.mp4"
     )

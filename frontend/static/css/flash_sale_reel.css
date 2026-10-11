@@ -1,69 +1,116 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      width: 1080px;
-      height: 1920px;
-      background: #090d16;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-      color: #ffffff;
-      padding: 80px 60px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .badge {
-      background: #ef4444;
-      padding: 20px 40px;
-      font-size: 36px;
-      font-weight: bold;
-      border-radius: 50px;
-      align-self: flex-start;
-      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
-    }
-    .img-card {
-      width: 960px;
-      height: 960px;
-      margin: 0 auto;
-      border-radius: 40px;
-      overflow: hidden;
-      background: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    }
-    .img-card img {
-      max-width: 85%;
-      max-height: 85%;
-      object-fit: contain;
-    }
-    .details {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .title {
-      font-size: 58px;
-      font-weight: 800;
-      line-height: 1.2;
-      color: #f8fafc;
-    }
-    .price {
-      font-size: 80px;
-      color: #4ade80;
-      font-weight: 900;
-    }
-    .cta {
-      background: linear-gradient(90deg, #6366f1, #8b5cf6);
-      padding: 36px;
-      text-align: center;
-      font-size: 48px;
-      font-weight: 800;
-      border-radius: 28px;
-      text-transform: uppercase;
-      box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
-    }
-    
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+/* Base body styling with dynamic viewport variables */
+body {
+  width: 100vw;
+  height: 100vh;
+  background: #090d16;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  color: #ffffff;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Aspect ratio body overrides when rendered in Playwright */
+body.ratio-9-16 {
+  width: 1080px;
+  height: 1920px;
+  padding: 80px 60px;
+}
+body.ratio-1-1 {
+  width: 1080px;
+  height: 1080px;
+  padding: 50px;
+}
+body.ratio-16-9 {
+  width: 1920px;
+  height: 1080px;
+  padding: 40px 80px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Adjust image card dynamically */
+.ratio-9-16 .img-card {
+  width: 960px;
+  height: 960px;
+}
+.ratio-1-1 .img-card {
+  width: 600px;
+  height: 600px;
+  margin: 0 auto;
+}
+.ratio-16-9 .img-card {
+  width: 700px;
+  height: 700px;
+  order: 1;
+}
+.ratio-16-9 .details {
+  flex: 1;
+  order: 2;
+  padding-left: 60px;
+}
+
+.badge {
+  background: #ef4444;
+  padding: 20px 40px;
+  font-size: 36px;
+  font-weight: bold;
+  border-radius: 50px;
+  align-self: flex-start;
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+}
+.img-card {
+  width: 960px;
+  height: 960px;
+  margin: 0 auto;
+  border-radius: 40px;
+  overflow: hidden;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+.img-card img {
+  max-width: 85%;
+  max-height: 85%;
+  object-fit: contain;
+}
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.title {
+  font-size: 58px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #f8fafc;
+}
+.price {
+  font-size: 80px;
+  color: #4ade80;
+  font-weight: 900;
+}
+.cta {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  padding: 36px;
+  text-align: center;
+  font-size: 48px;
+  font-weight: 800;
+  border-radius: 28px;
+  text-transform: uppercase;
+  box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
+}
+
 /* CSS For SubTitle service */
 /* Start Here */
 /* subtitle container and the glowing highlight keyframe animation */
