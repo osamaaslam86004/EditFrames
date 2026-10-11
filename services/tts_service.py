@@ -2,11 +2,22 @@ import os
 import subprocess
 import torch
 import soundfile as sf
+from google import genai
+from google.genai import types
 from core.config import get_settings
 from core.lifespan import models
 
 settings = get_settings()
 VIDEOS_DIR = settings.videos_dir
+
+# Map FakeStore / product categories to Kokoro voice personas
+CATEGORY_VOICE_MAP = {
+    "electronics": "am_adam",  # Deep, authoritative tech voice
+    "jewelery": "af_bella",  # Elegant, clear retail voice
+    "men's clothing": "am_michael",  # Crisp, energetic male voice
+    "women's clothing": "af_nicole",  # Smooth, engaging female voice
+}
+DEFAULT_VOICE = "af_bella"
 
 
 def get_audio_duration(file_path: str) -> float:
@@ -24,17 +35,69 @@ def get_audio_duration(file_path: str) -> float:
     return float(result.stdout)
 
 
-def generate_tts_script(product: dict) -> str:
+def generate_dynamic_tts_script(product: dict) -> str:
+    """Generate punchy, category-tailored sales copy via Gemini LLM with a fallback."""
     title = product.get("title", "")
     price = product.get("price", "")
-    return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today before it sells out!"
+    category = product.get("category", "general")
+
+    # Retrieve Gemini API key from settings (ensure your config exposes gemini_api_key)
+    api_key = (
+        settings.gemini_api_key.get_secret_value()
+        if getattr(settings, "gemini_api_key", None)
+        else None
+    )
+
+    if not api_key:
+        # Fallback if Gemini key is not configured
+        return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today before it sells out!"
+
+    try:
+        # Initialize the Google GenAI client
+        client = genai.Client(api_key=api_key)
+
+        prompt = (
+            f"You are an expert e-commerce copywriter. Write a short, punchy, high-conversion "
+            f"promotional voiceover script (under 25 words) for a social media short (TikTok/Reels).\n"
+            f"Product Title: {title}\n"
+            f"Category: {category}\n"
+            f"Price: ${price}\n"
+            f"Tone: Tailor tone to category (e.g., hype and urgent for electronics, luxury and elegant for jewelry). "
+            f"Return *only* the script text with no extra commentary or quotation marks."
+        )
+
+        # Call Gemini model using generate_content
+        model_name = getattr(settings, "gemini_model", "gemini-2.5-flash")
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=60,
+            ),
+        )
+
+        script = response.text.strip() if response.text else ""
+        return script if script else f"Don't miss out on {title} for just ${price}!"
+
+    except Exception as e:
+        print(
+            f" Gemini Script generation failed ({str(e)}). Falling back to default template."
+        )
+        return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today!"
 
 
-def synthesize_voiceover(product: dict) -> tuple[str, float]:
-    script_text = generate_tts_script(product)
+def synthesize_voiceover(product: dict) -> tuple[str, str, float]:
+    """Synthesize voiceover using category-mapped Kokoro voice personas."""
+    script_text = generate_dynamic_tts_script(product)
+
+    # Map category to voice persona
+    category = product.get("category", "").lower()
+    voice_persona = CATEGORY_VOICE_MAP.get(category, DEFAULT_VOICE)
+
     wav_path = os.path.join(VIDEOS_DIR, f"voice_{product['id']}.wav")
 
-    generator = models["tts"](script_text, voice="af_bella", speed=1.0)
+    generator = models["tts"](script_text, voice=voice_persona, speed=1.0)
     audio_chunks = [audio for _, _, audio in generator]
 
     combined_audio = (
@@ -45,4 +108,4 @@ def synthesize_voiceover(product: dict) -> tuple[str, float]:
     sf.write(wav_path, combined_audio, 24000)
 
     audio_duration = get_audio_duration(wav_path)
-    return wav_path, audio_duration
+    return wav_path, voice_persona, audio_duration

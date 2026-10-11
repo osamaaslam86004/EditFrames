@@ -44,14 +44,15 @@ def cleanup_old_videos():
 
 
 async def render_product_video(product: dict, browser, idx: int, total: int):
+    category = product.get("category", "general")
     await manager.broadcast(
-        f"🎙️ [{idx}/{total}] Generating KittenTTS voiceover script..."
+        f"[{idx}/{total}] Generating LLM script & synthesizing voice ({category})..."
     )
-    wav_path, audio_duration = synthesize_voiceover(product)
+    wav_path, voice_persona, audio_duration = synthesize_voiceover(product)
     record_duration_ms = int((audio_duration + 1.0) * 1000)
 
     await manager.broadcast(
-        f"🎬 [{idx}/{total}] Recording video ({audio_duration:.1f}s)..."
+        f"[{idx}/{total}] Recording video with voice persona '{voice_persona}' ({audio_duration:.1f}s)..."
     )
 
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
