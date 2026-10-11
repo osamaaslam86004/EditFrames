@@ -37,6 +37,110 @@
         </button>
       </header>
 
+      <!-- Customization & Preview Panel -->
+      <div
+        class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8 shadow-xl"
+      >
+        <h2
+          class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2"
+        >
+          <i class="fa-solid fa-sliders text-cyan-400"></i> Custom Reel
+          Generator & Preview
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 uppercase mb-2"
+              >Product Title</label
+            >
+            <input
+              type="text"
+              id="customTitle"
+              value="Wireless Noise-Canceling Headphones"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 uppercase mb-2"
+              >Price ($)</label
+            >
+            <input
+              type="number"
+              id="customPrice"
+              value="129.99"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 uppercase mb-2"
+              >Voice Persona</label
+            >
+            <select
+              id="voicePersona"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+            >
+              <option value="am_adam">am_adam (Tech / Deep)</option>
+              <option value="af_bella" selected>
+                af_bella (Retail / Clear)
+              </option>
+              <option value="am_michael">am_michael (Energetic)</option>
+              <option value="af_nicole">af_nicole (Smooth)</option>
+            </select>
+          </div>
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 uppercase mb-2"
+              >Aspect Ratio</label
+            >
+            <select
+              id="aspectRatio"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+            >
+              <option value="9:16">9:16 (TikTok / Reels / Shorts)</option>
+              <option value="1:1">1:1 (Instagram Feed)</option>
+              <option value="16:9">16:9 (YouTube Landscape)</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label
+              class="block text-xs font-semibold text-slate-400 uppercase mb-2"
+              >Product Image URL</label
+            >
+            <input
+              type="text"
+              id="imageUrl"
+              value="https://fakestoreapi.com/img/8.jpg"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+        </div>
+
+        <!-- Action & Audio Preview Bar -->
+        <div
+          class="flex flex-wrap items-center justify-between gap-4 border-t border-slate-800 pt-5"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              onclick="previewAudio()"
+              class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold py-3 px-5 rounded-xl transition border border-slate-700"
+            >
+              <i class="fa-solid fa-volume-high"></i> Preview Voiceover
+            </button>
+            <audio id="audioPreviewPlayer" controls class="hidden h-10"></audio>
+          </div>
+
+          <button
+            id="generateBtn"
+            onclick="triggerCustomGeneration()"
+            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-indigo-600/30"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Custom Reel
+          </button>
+        </div>
+      </div>
+
       <!-- Status Banner -->
       <div
         id="statusBanner"

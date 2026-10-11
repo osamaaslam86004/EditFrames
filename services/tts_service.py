@@ -87,7 +87,7 @@ def generate_dynamic_tts_script(product: dict) -> str:
         return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today!"
 
 
-def synthesize_voiceover(product: dict) -> tuple[str, str, float]:
+def synthesize_voiceover(product: dict) -> tuple[str, str, float, str]:
     """Synthesize voiceover using category-mapped Kokoro voice personas."""
     script_text = generate_dynamic_tts_script(product)
 
@@ -109,3 +109,31 @@ def synthesize_voiceover(product: dict) -> tuple[str, str, float]:
 
     audio_duration = get_audio_duration(wav_path)
     return wav_path, voice_persona, audio_duration, script_text
+
+
+def synthesize_voiceover_preview(
+    product: dict, voice_persona: str | None = None
+) -> tuple[str, str]:
+    """
+    Synthesize preview voiceover allowing an explicit voice persona override.
+    """
+    script_text = generate_dynamic_tts_script(product)
+
+    # Fallback to category mapping if no explicit voice persona override is provided
+    if not voice_persona:
+        category = product.get("category", "").lower()
+        voice_persona = CATEGORY_VOICE_MAP.get(category, DEFAULT_VOICE)
+
+    wav_path = os.path.join(VIDEOS_DIR, f"voice_{product['id']}.wav")
+
+    generator = models["tts"](script_text, voice=voice_persona, speed=1.0)
+    audio_chunks = [audio for _, _, audio in generator]
+
+    combined_audio = (
+        torch.cat(audio_chunks, dim=0).numpy()
+        if len(audio_chunks) > 1
+        else audio_chunks[0].numpy()
+    )
+    sf.write(wav_path, combined_audio, 24000)
+
+    return wav_path, voice_persona

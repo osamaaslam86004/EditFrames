@@ -1,3 +1,5 @@
+// # Handles live preview requests,  custom batch triggers & load existing videos from backend
+
 async function loadVideos() {
   const grid = document.getElementById("videoGrid");
   const countLabel = document.getElementById("videoCount");
@@ -41,6 +43,7 @@ async function loadVideos() {
   }
 }
 
+// Generate Vedios in batch
 async function triggerBatch() {
   const btn = document.getElementById("generateBtn");
   const banner = document.getElementById("statusBanner");
@@ -62,6 +65,83 @@ async function triggerBatch() {
     }
   } catch (err) {
     statusText.innerText = "Server error occurred.";
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove("opacity-50", "cursor-not-allowed");
+  }
+}
+
+// For testing audio voiceover previews
+async function previewAudio() {
+  const title = document.getElementById("customTitle").value;
+  const price = document.getElementById("customPrice").value;
+  const voicePersona = document.getElementById("voicePersona").value;
+
+  try {
+    const res = await fetch("/api/v1/videos/preview-audio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_title: title,
+        price: parseFloat(price),
+        image_url: "https://fakestoreapi.com/placeholder.jpg",
+        voice_persona: voicePersona,
+        aspect_ratio: "9:16",
+        use_llm_script: true,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      const player = document.getElementById("audioPreviewPlayer");
+      player.src = data.preview_url;
+      player.classList.remove("hidden");
+      player.play();
+    } else {
+      alert("Failed to generate audio preview.");
+    }
+  } catch (err) {
+    console.error("Audio preview error:", err);
+  }
+}
+
+// Custom Video Generation: Sending customized generation parameters to backend
+async function triggerCustomGeneration() {
+  const btn = document.getElementById("generateBtn");
+  const banner = document.getElementById("statusBanner");
+  const statusText = document.getElementById("statusText");
+
+  btn.disabled = true;
+  btn.classList.add("opacity-50", "cursor-not-allowed");
+  banner.classList.remove("hidden");
+  statusText.innerText = "Queuing custom promo reel rendering via Celery...";
+
+  const payload = {
+    product_title: document.getElementById("customTitle").value,
+    price: parseFloat(document.getElementById("customPrice").value),
+    image_url: document.getElementById("imageUrl").value,
+    voice_persona: document.getElementById("voicePersona").value,
+    aspect_ratio: document.getElementById("aspectRatio").value,
+    use_llm_script: true,
+  };
+
+  try {
+    const res = await fetch("/api/v1/videos/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      statusText.innerText =
+        "Success! Custom reel task dispatched to background worker queue.";
+      setTimeout(() => banner.classList.add("hidden"), 4000);
+      await loadVideos();
+    } else {
+      statusText.innerText = "Error triggering video generation.";
+    }
+  } catch (err) {
+    statusText.innerText = "Server connection error occurred.";
   } finally {
     btn.disabled = false;
     btn.classList.remove("opacity-50", "cursor-not-allowed");
