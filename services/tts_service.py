@@ -42,11 +42,7 @@ def generate_dynamic_tts_script(product: dict) -> str:
     category = product.get("category", "general")
 
     # Retrieve Gemini API key from settings (ensure your config exposes gemini_api_key)
-    api_key = (
-        settings.gemini_api_key.get_secret_value()
-        if getattr(settings, "gemini_api_key", None)
-        else None
-    )
+    api_key = settings.llm.gemini_api_key.get_secret_value()
 
     if not api_key:
         # Fallback if Gemini key is not configured
@@ -67,7 +63,7 @@ def generate_dynamic_tts_script(product: dict) -> str:
         )
 
         # Call Gemini model using generate_content
-        model_name = getattr(settings, "gemini_model", "gemini-2.5-flash")
+        model_name = getattr(settings.llm, "gemini_model", "gemini-2.5-flash")
         response = client.models.generate_content(
             model=model_name,
             contents=prompt,

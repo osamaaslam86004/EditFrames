@@ -1,4 +1,3 @@
-import asyncio
 import os
 import uuid
 
@@ -25,9 +24,17 @@ VIDEOS_DIR = settings.videos_dir
 
 
 @router.post("/generate")
-async def trigger_generation():
-    asyncio.create_task(generate_weekly_videos_task())
-    return {"status": "started", "message": "KittenTTS generation pipeline started."}
+async def trigger_generation(payload: VideoGenerateRequest | None = None):
+    """Triggers video generation with optional custom dashboard parameters."""
+
+    task_data = payload.model_dump() if payload else None
+    task = generate_weekly_videos_task.delay(task_data)
+
+    return {
+        "status": "started",
+        "task_id": task.id,
+        "message": "Video generation pipeline dispatched to Celery worker.",
+    }
 
 
 @router.get("/")
@@ -45,8 +52,10 @@ def list_videos():
 @router.get("/videos/download/{filename}")
 def download_video(filename: str):
     file_path = os.path.join(VIDEOS_DIR, filename)
+
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Video file not found.")
+
     return FileResponse(path=file_path, filename=filename, media_type="video/mp4")
 
 
