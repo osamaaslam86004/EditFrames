@@ -2,7 +2,8 @@ import os
 import subprocess
 from playwright.async_api import async_playwright
 from core.config import get_settings
-from services.tts_service import synthesize_voiceover, get_audio_duration
+from services.tts_service import synthesize_voiceover
+from services.subtitle_service import generate_subtitle_html
 from core.websocket import manager
 
 settings = get_settings()
@@ -45,23 +46,31 @@ def cleanup_old_videos():
 
 async def render_product_video(product: dict, browser, idx: int, total: int):
     category = product.get("category", "general")
-    await manager.broadcast(
-        f"[{idx}/{total}] Generating LLM script & synthesizing voice ({category})..."
-    )
-    wav_path, voice_persona, audio_duration = synthesize_voiceover(product)
-    record_duration_ms = int((audio_duration + 1.0) * 1000)
 
     await manager.broadcast(
-        f"[{idx}/{total}] Recording video with voice persona '{voice_persona}' ({audio_duration:.1f}s)..."
+        f"[{idx}/{total}] Generating LLM script & synthesizing voice ({category}) and & subtitle timings..."
+    )
+
+    # # 1. Synthesize voiceover and get script text & audio duration
+    wav_path, voice_persona, audio_duration, script_text = synthesize_voiceover(product)
+    record_duration_ms = int((audio_duration + 1.0) * 1000)
+
+    # 2. Generate karaoke subtitle HTML spans
+    subtitles_html = generate_subtitle_html(script_text, audio_duration)
+
+    await manager.broadcast(
+        f"[{idx}/{total}] Recording video with voice persona '{voice_persona}' and animated subtitles ({audio_duration:.1f}s)..."
     )
 
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         html_template = f.read()
 
+    # 3. Inject product details and subtitle spans into template
     rendered_html = (
         html_template.replace("{{PRODUCT_TITLE}}", product["title"])
         .replace("{{PRICE}}", str(product["price"]))
         .replace("{{IMAGE_URL}}", product["image"])
+        .replace("{{SUBTITLES_HTML}}", subtitles_html)
     )
 
     temp_html_path = os.path.join(BASE_DIR, f"temp_{product['id']}.html")
@@ -77,6 +86,8 @@ async def render_product_video(product: dict, browser, idx: int, total: int):
     page = await context.new_page()
     await page.goto(f"file://{temp_html_path}", wait_until="networkidle")
     await page.wait_for_selector("img")
+
+    # # Playwright records the canvas precisely while CSS animations play
     await page.wait_for_timeout(record_duration_ms)
     await context.close()
 

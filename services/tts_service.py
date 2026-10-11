@@ -108,4 +108,4 @@ def synthesize_voiceover(product: dict) -> tuple[str, str, float]:
     sf.write(wav_path, combined_audio, 24000)
 
     audio_duration = get_audio_duration(wav_path)
-    return wav_path, voice_persona, audio_duration
+    return wav_path, voice_persona, audio_duration, script_text

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Flash Sale Reel</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/flash_sale_reel.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/flash_sale_reel.css') }}">
 </head>
 <body>
   <div class="badge">⚡ WEEKLY FLASH SALE</div>
@@ -15,6 +15,11 @@
   <div class="details">
     <div class="title">{{PRODUCT_TITLE}}</div>
     <div class="price">${{PRICE}}</div>
+    
+    <!-- Burned-In Karaoke Subtitles Container -->
+    <div class="subtitles-container">
+      <div class="subtitles">{{SUBTITLES_HTML}}</div>
+    </div>
   </div>
 
   <div class="cta">SHOP NOW — LINK IN BIO 🛍️</div>
