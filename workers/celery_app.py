@@ -10,6 +10,7 @@ celery_app = Celery(
     backend=settings.celery.celery_result_backend,
     include=["workers.tasks"],
 )
+
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
