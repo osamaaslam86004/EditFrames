@@ -1,15 +1,12 @@
 from unittest.mock import MagicMock, patch
-
 import pytest
 from fastapi.testclient import TestClient
-
 from core.security import require_api_key
 from main import app
 
 
 @pytest.fixture
 def client():
-    # Use TestClient with bypass on require_api_key dependency for unit testing
     app.dependency_overrides[require_api_key] = lambda: None
     with TestClient(app) as c:
         yield c
@@ -25,22 +22,17 @@ def test_trigger_generation_with_custom_payload(client):
         "aspect_ratio": "16:9",
         "use_llm_script": True,
     }
-
     mock_task = MagicMock()
     mock_task.id = "mock-task-uuid-1234"
-
     with patch(
         "api.v1.endpoints.videos.generate_weekly_videos_task.delay",
         return_value=mock_task,
     ) as mock_delay:
         response = client.post("/api/v1/videos/generate", json=payload)
-
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "started"
         assert data["task_id"] == "mock-task-uuid-1234"
-
-        # Verify task was called with expected dictionary
         mock_delay.assert_called_once()
         called_args = mock_delay.call_args[0][0]
         assert called_args["product_title"] == "Sony WH-1000XM5 Headphones"
@@ -53,26 +45,45 @@ def test_trigger_generation_with_custom_payload(client):
 def test_trigger_generation_without_payload(client):
     mock_task = MagicMock()
     mock_task.id = "mock-batch-uuid-5678"
-
     with patch(
         "api.v1.endpoints.videos.generate_weekly_videos_task.delay",
         return_value=mock_task,
     ) as mock_delay:
         response = client.post("/api/v1/videos/generate")
-
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "started"
         assert data["task_id"] == "mock-batch-uuid-5678"
-
         mock_delay.assert_called_once_with(None)
 
 
 def test_trigger_generation_invalid_payload(client):
     invalid_payload = {
-        "product_title": "",  # Min length is 1
-        "price": -10.0,  # gt 0
+        "product_title": "",
+        "price": -10.0,
         "image_url": "https://example.com/item.jpg",
     }
     response = client.post("/api/v1/videos/generate", json=invalid_payload)
     assert response.status_code == 422
+
+
+def test_preview_audio_endpoint(client):
+    payload = {
+        "product_title": "Wireless Noise-Canceling Headphones",
+        "price": 129.99,
+        "image_url": "https://example.com/item.jpg",
+        "voice_persona": "af_bella",
+        "aspect_ratio": "9:16",
+        "use_llm_script": True,
+    }
+    with patch(
+        "api.v1.endpoints.videos.synthesize_voiceover_preview",
+        return_value=("/tmp/videos/voice_preview_12345.wav", "af_bella"),
+    ) as mock_synth:
+        response = client.post("/api/v1/videos/preview-audio", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["voice_persona"] == "af_bella"
+        assert "/api/v1/videos/preview-audio/stream/voice_preview_12345.wav" in data["preview_url"]
+        mock_synth.assert_called_once()

@@ -1,6 +1,6 @@
-from enum import StrEnum
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class VideoGenerateRequest(BaseModel):
@@ -20,5 +20,4 @@ class VideoJobResponse(BaseModel):
     status: str
     output_url: str | None = None
     error_message: str | None = None
-
     model_config = {"from_attributes": True}
