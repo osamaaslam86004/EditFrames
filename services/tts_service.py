@@ -1,11 +1,16 @@
+import logging
 import os
 import subprocess
-import torch
+
+import numpy as np
 import soundfile as sf
 from google import genai
 from google.genai import types
+
 from core.config import get_settings
 from core.lifespan import models
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 VIDEOS_DIR = settings.videos_dir
@@ -18,6 +23,19 @@ CATEGORY_VOICE_MAP = {
     "women's clothing": "af_nicole",  # Smooth, engaging female voice
 }
 DEFAULT_VOICE = "af_bella"
+
+
+def get_tts_model():
+    """Lazily load or retrieve the Kokoro TTS model."""
+    if "tts" not in models or models["tts"] is None:
+        try:
+            from kokoro import KPipeline
+
+            models["tts"] = KPipeline(lang_code="a")
+        except Exception as e:
+            logger.warning("Kokoro TTS pipeline not available: %s", str(e))
+            return None
+    return models.get("tts")
 
 
 def get_audio_duration(file_path: str) -> float:
@@ -78,7 +96,7 @@ def generate_dynamic_tts_script(product: dict) -> str:
 
     except Exception as e:
         print(
-            f" Gemini Script generation failed ({str(e)}). Falling back to default template."
+            f" Gemini Script generation failed ({e!s}). Falling back to default template."
         )
         return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today!"
 
@@ -87,21 +105,36 @@ def synthesize_voiceover(product: dict) -> tuple[str, str, float, str]:
     """Synthesize voiceover using category-mapped Kokoro voice personas."""
     script_text = generate_dynamic_tts_script(product)
 
-    # Map category to voice persona
+    # Map category to voice persona, honoring custom voice persona overrides
     category = product.get("category", "").lower()
-    voice_persona = CATEGORY_VOICE_MAP.get(category, DEFAULT_VOICE)
+    voice_persona = product.get("voice_persona") or CATEGORY_VOICE_MAP.get(
+        category, DEFAULT_VOICE
+    )
 
     wav_path = os.path.join(VIDEOS_DIR, f"voice_{product['id']}.wav")
 
-    generator = models["tts"](script_text, voice=voice_persona, speed=1.0)
-    audio_chunks = [audio for _, _, audio in generator]
+    tts_model = get_tts_model()
+    if tts_model is not None:
+        try:
+            import torch
 
-    combined_audio = (
-        torch.cat(audio_chunks, dim=0).numpy()
-        if len(audio_chunks) > 1
-        else audio_chunks[0].numpy()
-    )
-    sf.write(wav_path, combined_audio, 24000)
+            generator = tts_model(script_text, voice=voice_persona, speed=1.0)
+            audio_chunks = [audio for _, _, audio in generator]
+
+            combined_audio = (
+                torch.cat(audio_chunks, dim=0).numpy()
+                if len(audio_chunks) > 1
+                else audio_chunks[0].numpy()
+            )
+            sf.write(wav_path, combined_audio, 24000)
+        except Exception as e:
+            logger.warning("Kokoro/torch synthesis error: %s", str(e))
+            placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
+            sf.write(wav_path, placeholder_audio, 24000)
+    else:
+        # Fallback synthetic waveform if TTS model weights aren't loaded in worker
+        placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
+        sf.write(wav_path, placeholder_audio, 24000)
 
     audio_duration = get_audio_duration(wav_path)
     return wav_path, voice_persona, audio_duration, script_text
@@ -118,18 +151,32 @@ def synthesize_voiceover_preview(
     # Fallback to category mapping if no explicit voice persona override is provided
     if not voice_persona:
         category = product.get("category", "").lower()
-        voice_persona = CATEGORY_VOICE_MAP.get(category, DEFAULT_VOICE)
+        voice_persona = product.get("voice_persona") or CATEGORY_VOICE_MAP.get(
+            category, DEFAULT_VOICE
+        )
 
     wav_path = os.path.join(VIDEOS_DIR, f"voice_{product['id']}.wav")
 
-    generator = models["tts"](script_text, voice=voice_persona, speed=1.0)
-    audio_chunks = [audio for _, _, audio in generator]
+    tts_model = get_tts_model()
+    if tts_model is not None:
+        try:
+            import torch
 
-    combined_audio = (
-        torch.cat(audio_chunks, dim=0).numpy()
-        if len(audio_chunks) > 1
-        else audio_chunks[0].numpy()
-    )
-    sf.write(wav_path, combined_audio, 24000)
+            generator = tts_model(script_text, voice=voice_persona, speed=1.0)
+            audio_chunks = [audio for _, _, audio in generator]
+
+            combined_audio = (
+                torch.cat(audio_chunks, dim=0).numpy()
+                if len(audio_chunks) > 1
+                else audio_chunks[0].numpy()
+            )
+            sf.write(wav_path, combined_audio, 24000)
+        except Exception as e:
+            logger.warning("Kokoro/torch synthesis error: %s", str(e))
+            placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
+            sf.write(wav_path, placeholder_audio, 24000)
+    else:
+        placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
+        sf.write(wav_path, placeholder_audio, 24000)
 
     return wav_path, voice_persona

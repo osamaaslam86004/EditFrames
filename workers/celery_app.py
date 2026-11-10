@@ -8,7 +8,7 @@ celery_app = Celery(
     "generate_weekly_videos_task",
     broker=settings.celery.celery_broker_url,
     backend=settings.celery.celery_result_backend,
-    include=["app.workers.tasks"],
+    include=["workers.tasks"],
 )
 celery_app.conf.update(
     task_serializer="json",
