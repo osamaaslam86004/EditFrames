@@ -11,7 +11,6 @@ from core.config import get_settings
 from core.lifespan import models
 
 logger = logging.getLogger(__name__)
-
 settings = get_settings()
 VIDEOS_DIR = settings.videos_dir
 
@@ -49,8 +48,11 @@ def get_audio_duration(file_path: str) -> float:
         "default=noprint_wrappers=1:nokey=1",
         file_path,
     ]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    return float(result.stdout)
+    try:
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return float(result.stdout)
+    except Exception:
+        return 3.0
 
 
 def generate_dynamic_tts_script(product: dict) -> str:
@@ -59,17 +61,15 @@ def generate_dynamic_tts_script(product: dict) -> str:
     price = product.get("price", "")
     category = product.get("category", "general")
 
-    # Retrieve Gemini API key from settings (ensure your config exposes gemini_api_key)
-    api_key = settings.llm.gemini_api_key.get_secret_value()
-
+    api_key = (
+        settings.llm.gemini_api_key.get_secret_value()
+        if settings.llm.gemini_api_key
+        else None
+    )
     if not api_key:
-        # Fallback if Gemini key is not configured
         return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today before it sells out!"
-
     try:
-        # Initialize the Google GenAI client
         client = genai.Client(api_key=api_key)
-
         prompt = (
             f"You are an expert e-commerce copywriter. Write a short, punchy, high-conversion "
             f"promotional voiceover script (under 25 words) for a social media short (TikTok/Reels).\n"
@@ -79,8 +79,6 @@ def generate_dynamic_tts_script(product: dict) -> str:
             f"Tone: Tailor tone to category (e.g., hype and urgent for electronics, luxury and elegant for jewelry). "
             f"Return *only* the script text with no extra commentary or quotation marks."
         )
-
-        # Call Gemini model using generate_content
         model_name = getattr(settings.llm, "gemini_model", "gemini-2.5-flash")
         response = client.models.generate_content(
             model=model_name,
@@ -90,13 +88,12 @@ def generate_dynamic_tts_script(product: dict) -> str:
                 max_output_tokens=60,
             ),
         )
-
         script = response.text.strip() if response.text else ""
         return script if script else f"Don't miss out on {title} for just ${price}!"
-
     except Exception as e:
-        print(
-            f" Gemini Script generation failed ({e!s}). Falling back to default template."
+        logger.warning(
+            "Gemini Script generation failed (%s). Falling back to default template.",
+            str(e),
         )
         return f"Check out this deal! {title}. Now on sale for only {price} dollars. Grab yours today!"
 
@@ -104,15 +101,12 @@ def generate_dynamic_tts_script(product: dict) -> str:
 def synthesize_voiceover(product: dict) -> tuple[str, str, float, str]:
     """Synthesize voiceover using category-mapped Kokoro voice personas."""
     script_text = generate_dynamic_tts_script(product)
-
-    # Map category to voice persona, honoring custom voice persona overrides
     category = product.get("category", "").lower()
     voice_persona = product.get("voice_persona") or CATEGORY_VOICE_MAP.get(
         category, DEFAULT_VOICE
     )
-
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
     wav_path = os.path.join(VIDEOS_DIR, f"voice_{product['id']}.wav")
-
     tts_model = get_tts_model()
     if tts_model is not None:
         try:
@@ -120,7 +114,6 @@ def synthesize_voiceover(product: dict) -> tuple[str, str, float, str]:
 
             generator = tts_model(script_text, voice=voice_persona, speed=1.0)
             audio_chunks = [audio for _, _, audio in generator]
-
             combined_audio = (
                 torch.cat(audio_chunks, dim=0).numpy()
                 if len(audio_chunks) > 1
@@ -132,10 +125,8 @@ def synthesize_voiceover(product: dict) -> tuple[str, str, float, str]:
             placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
             sf.write(wav_path, placeholder_audio, 24000)
     else:
-        # Fallback synthetic waveform if TTS model weights aren't loaded in worker
         placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
         sf.write(wav_path, placeholder_audio, 24000)
-
     audio_duration = get_audio_duration(wav_path)
     return wav_path, voice_persona, audio_duration, script_text
 
@@ -143,20 +134,15 @@ def synthesize_voiceover(product: dict) -> tuple[str, str, float, str]:
 def synthesize_voiceover_preview(
     product: dict, voice_persona: str | None = None
 ) -> tuple[str, str]:
-    """
-    Synthesize preview voiceover allowing an explicit voice persona override.
-    """
+    """Synthesize preview voiceover allowing an explicit voice persona override."""
     script_text = generate_dynamic_tts_script(product)
-
-    # Fallback to category mapping if no explicit voice persona override is provided
     if not voice_persona:
         category = product.get("category", "").lower()
         voice_persona = product.get("voice_persona") or CATEGORY_VOICE_MAP.get(
             category, DEFAULT_VOICE
         )
-
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
     wav_path = os.path.join(VIDEOS_DIR, f"voice_{product['id']}.wav")
-
     tts_model = get_tts_model()
     if tts_model is not None:
         try:
@@ -164,7 +150,6 @@ def synthesize_voiceover_preview(
 
             generator = tts_model(script_text, voice=voice_persona, speed=1.0)
             audio_chunks = [audio for _, _, audio in generator]
-
             combined_audio = (
                 torch.cat(audio_chunks, dim=0).numpy()
                 if len(audio_chunks) > 1
@@ -178,5 +163,4 @@ def synthesize_voiceover_preview(
     else:
         placeholder_audio = np.zeros(24000 * 3, dtype=np.float32)
         sf.write(wav_path, placeholder_audio, 24000)
-
     return wav_path, voice_persona
