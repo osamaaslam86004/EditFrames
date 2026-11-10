@@ -151,3 +151,5 @@ Thumbs.db
 .vscode/
 .idea/
 repomix-output.txt
+CHANGELOG.md
+.github/context-mode

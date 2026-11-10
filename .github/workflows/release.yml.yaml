@@ -1,0 +1,35 @@
+name: Release from Changelog
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggered whenever a version tag like v2.0.3 is pushed
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create releases and upload assets
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Release Notes from Changelog
+        id: extract_changelog
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          version: ${{ github.ref_name }} # Automatically reads the version from the pushed tag (e.g. v2.0.3 -> 2.0.3)
+          path: './CHANGELOG.md'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.extract_changelog.outputs.version }}
+          body: ${{ steps.extract_changelog.outputs.changes }}
+          draft: false
+          prerelease: ${{ steps.extract_changelog.outputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
