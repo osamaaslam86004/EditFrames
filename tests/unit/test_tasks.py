@@ -38,6 +38,10 @@ async def test_run_pipeline_custom_payload():
         patch(
             "workers.tasks.render_product_video", new_callable=AsyncMock
         ) as mock_render,
+        patch(
+            "workers.tasks.upload_video_to_storage",
+            return_value="https://example.com/videos/product_custom_chair.mp4",
+        ) as mock_storage,
     ):
         mock_pw_ctx.return_value.__aenter__.return_value = mock_playwright
         mock_create_job.return_value = "job-chair-123"
@@ -123,6 +127,10 @@ async def test_run_pipeline_fallback_batch():
         patch(
             "workers.tasks.render_product_video", new_callable=AsyncMock
         ) as mock_render,
+        patch(
+            "workers.tasks.upload_video_to_storage",
+            return_value="https://example.com/videos/mock_batch.mp4",
+        ) as mock_storage,
     ):
         mock_pw_ctx.return_value.__aenter__.return_value = mock_playwright
         mock_httpx.return_value.__enter__.return_value.get.return_value = mock_response
@@ -181,3 +189,48 @@ async def test_run_pipeline_error_handling():
 
         # Ensure engine is still disposed
         mock_engine.dispose.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_with_s3_storage_url():
+    payload = {
+        "product_title": "Smart Ring",
+        "price": 199.00,
+        "image_url": "https://example.com/ring.jpg",
+    }
+
+    mock_engine = AsyncMock()
+    mock_sessionmaker = MagicMock()
+    mock_playwright = AsyncMock()
+
+    s3_cloud_url = (
+        "https://editframes-bucket.s3.amazonaws.com/videos/product_custom_ring.mp4"
+    )
+
+    with (
+        patch(
+            "workers.tasks.get_task_sessionmaker",
+            return_value=(mock_engine, mock_sessionmaker),
+        ),
+        patch("workers.tasks.async_playwright") as mock_pw_ctx,
+        patch(
+            "workers.tasks.create_job_record", new_callable=AsyncMock
+        ) as mock_create_job,
+        patch(
+            "workers.tasks.update_job_status", new_callable=AsyncMock
+        ) as mock_update_status,
+        patch(
+            "workers.tasks.render_product_video", new_callable=AsyncMock
+        ) as mock_render,
+        patch(
+            "workers.tasks.upload_video_to_storage", return_value=s3_cloud_url
+        ) as mock_storage,
+    ):
+        mock_pw_ctx.return_value.__aenter__.return_value = mock_playwright
+        mock_create_job.return_value = "job-ring-99"
+
+        await run_pipeline(payload)
+
+        mock_storage.assert_called_once()
+        completed_call = mock_update_status.call_args_list[1]
+        assert completed_call[1]["output_url"] == s3_cloud_url

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import uuid
 
 import httpx
@@ -15,11 +16,13 @@ from sqlalchemy.pool import NullPool
 
 from core.config import get_settings
 from db.models.videos_model import VideoJob
+from services.storage_service import upload_video_to_storage
 from services.video_service import cleanup_old_videos, render_product_video
 from workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+VIDEOS_DIR = settings.videos_dir
 
 
 # 1. Reuse central settings to resolve database URL and async driver
@@ -128,8 +131,12 @@ async def run_pipeline(payload: dict | None = None):
                         product, browser, 1, 1, aspect_ratio=aspect_ratio
                     )
 
-                    # 4. Mark job as completed with download URL
-                    output_url = f"/api/v1/videos/download/product_{product['id']}.mp4"
+                    # 4. Upload to persistent cloud storage (S3/MinIO) or resolve fallback URL
+                    video_filename = f"product_{product['id']}.mp4"
+                    local_mp4_path = os.path.join(VIDEOS_DIR, video_filename)
+                    output_url = upload_video_to_storage(
+                        local_mp4_path, destination_key=f"videos/{video_filename}"
+                    )
                     await update_job_status(
                         sessionmaker, job_id, "completed", output_url=output_url
                     )
@@ -177,8 +184,11 @@ async def run_pipeline(payload: dict | None = None):
                             len(products),
                             aspect_ratio="9:16",
                         )
-                        output_url = (
-                            f"/api/v1/videos/download/product_{product['id']}.mp4"
+                        # Upload to persistent cloud storage (S3/MinIO) or resolve fallback URL
+                        video_filename = f"product_{product['id']}.mp4"
+                        local_mp4_path = os.path.join(VIDEOS_DIR, video_filename)
+                        output_url = upload_video_to_storage(
+                            local_mp4_path, destination_key=f"videos/{video_filename}"
                         )
                         await update_job_status(
                             sessionmaker, job_id, "completed", output_url=output_url

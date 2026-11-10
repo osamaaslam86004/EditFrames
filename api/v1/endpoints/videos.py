@@ -1,12 +1,16 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from core.security import require_api_key
-from schemas.app_schemas import VideoGenerateRequest
+from db.models.videos_model import VideoJob
+from db.session import get_db_session
+from schemas.app_schemas import VideoGenerateRequest, VideoJobResponse
 from services.tts_service import synthesize_voiceover_preview
 from workers.tasks import generate_weekly_videos_task
 
@@ -47,6 +51,24 @@ async def trigger_generation(
     }
 
 
+@router.get("/jobs/{job_id}", response_model=VideoJobResponse)
+async def get_job_status(
+    job_id: str,
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Fetches the current status, output URL, and error message for a video job."""
+    result = await db.execute(select(VideoJob).where(VideoJob.id == job_id))
+    job = result.scalars().first()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Video job '{job_id}' not found.",
+        )
+
+    return job
+
+
 @router.get("", include_in_schema=False)
 @router.get("/")
 def list_videos():
@@ -75,6 +97,19 @@ def download_video(filename: str):
 
 
 # Legacy routes for dashboard UI compatibility
+@legacy_router.get(
+    "/jobs/{job_id}", response_model=VideoJobResponse, include_in_schema=False
+)
+@legacy_router.get(
+    "/videos/jobs/{job_id}", response_model=VideoJobResponse, include_in_schema=False
+)
+async def legacy_get_job_status(
+    job_id: str,
+    db: AsyncSession = Depends(get_db_session),
+):
+    return await get_job_status(job_id=job_id, db=db)
+
+
 @legacy_router.get("/videos", include_in_schema=False)
 def legacy_list_videos():
     return list_videos()

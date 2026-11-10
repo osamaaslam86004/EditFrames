@@ -154,6 +154,44 @@ class LLMModelProviderConfig(BaseModel):
         return v
 
 
+# Cloud Object Storage (S3 / MinIO) Configurations
+class StorageConfig(BaseModel):
+    s3_bucket_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "s3_bucket_name", "bucket_name", "AWS_S3_BUCKET_NAME", "S3_BUCKET"
+        ),
+    )
+    s3_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "s3_endpoint_url", "endpoint_url", "AWS_ENDPOINT_URL", "MINIO_ENDPOINT"
+        ),
+    )
+    aws_access_key_id: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "aws_access_key_id", "access_key_id", "AWS_ACCESS_KEY_ID"
+        ),
+    )
+    aws_secret_access_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "aws_secret_access_key", "secret_access_key", "AWS_SECRET_ACCESS_KEY"
+        ),
+    )
+    aws_region: str = Field(
+        default="us-east-1",
+        validation_alias=AliasChoices("aws_region", "region", "AWS_REGION"),
+    )
+    public_url_prefix: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "public_url_prefix", "s3_public_url_prefix", "STORAGE_PUBLIC_URL_PREFIX"
+        ),
+    )
+
+
 class Settings(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
@@ -161,6 +199,7 @@ class Settings(BaseSettings):
     redis: RedisConfig
     celery: CeleryConfig = Field(default_factory=CeleryConfig)
     llm: LLMModelProviderConfig
+    storage: StorageConfig = Field(default_factory=StorageConfig)
 
     model_config = SettingsConfigDict(
         env_file=".env",
