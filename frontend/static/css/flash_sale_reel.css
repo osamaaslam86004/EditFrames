@@ -1,166 +1,354 @@
+/* Fluid Layout Variables & Theme Definitions */
+:root {
+  --bg-dark: #090d16;
+  --bg-card: #131b2e;
+  --accent-cyan: #06b6d4;
+  --accent-indigo: #6366f1;
+  --accent-pink: #ec4899;
+  --text-light: #f8fafc;
+  --text-muted: #94a3b8;
+  --gold-yellow: #f59e0b;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-/* Base body styling with dynamic viewport variables */
+
 body {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  overflow: hidden;
   width: 100vw;
   height: 100vh;
-  background: #090d16;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  color: #ffffff;
-  padding: 60px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Base Container */
+.reel-container {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-/* Aspect ratio body overrides when rendered in Playwright */
-body.ratio-9-16 {
-  width: 1080px;
-  height: 1920px;
-  padding: 80px 60px;
-}
-body.ratio-1-1 {
-  width: 1080px;
-  height: 1080px;
-  padding: 50px;
-}
-body.ratio-16-9 {
-  width: 1920px;
-  height: 1080px;
-  padding: 40px 80px;
-  flex-direction: row;
-  flex-wrap: wrap;
   align-items: center;
+  padding: 40px;
+  background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%);
+  position: relative;
 }
 
-/* Adjust image card dynamically */
-.ratio-9-16 .img-card {
-  width: 960px;
-  height: 960px;
+/* Keyframe Animations */
+@keyframes zoomIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
-.ratio-1-1 .img-card {
-  width: 600px;
-  height: 600px;
-  margin: 0 auto;
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow:
+      0 0 30px rgba(6, 182, 212, 0.8),
+      0 0 45px rgba(99, 102, 241, 0.6);
+  }
 }
-.ratio-16-9 .img-card {
-  width: 700px;
-  height: 700px;
-  order: 1;
+
+.zoom-in,
+.scale-in,
+.fade-in {
+  animation: zoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-.ratio-16-9 .details {
-  flex: 1;
-  order: 2;
-  padding-left: 60px;
+
+.pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+/* Header & Flash Sale Badge */
+.header-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  z-index: 10;
 }
 
 .badge {
-  background: #ef4444;
-  padding: 20px 40px;
-  font-size: 36px;
-  font-weight: bold;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 28px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 14px 32px;
   border-radius: 50px;
-  align-self: flex-start;
-  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
+
+.countdown-timer {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-family: monospace, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 20px;
+  letter-spacing: 1.5px;
+}
+
+/* Image Card Container */
 .img-card {
-  width: 960px;
-  height: 960px;
-  margin: 0 auto;
-  border-radius: 40px;
+  width: 80%;
+  max-width: 700px;
+  height: 45%;
+  background-color: var(--bg-card);
+  border-radius: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  background: #ffffff;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
 }
+
 .img-card img {
-  max-width: 85%;
-  max-height: 85%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.details {
+
+/* Details Card */
+.details-card {
+  width: 90%;
+  max-width: 800px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  z-index: 10;
 }
+
 .title {
-  font-size: 58px;
+  font-size: 36px;
   font-weight: 800;
   line-height: 1.2;
-  color: #f8fafc;
-}
-.price {
-  font-size: 80px;
-  color: #4ade80;
-  font-weight: 900;
-}
-.cta {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  padding: 36px;
-  text-align: center;
-  font-size: 48px;
-  font-weight: 800;
-  border-radius: 28px;
-  text-transform: uppercase;
-  box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
+  color: var(--text-light);
+  background: linear-gradient(to right, #ffffff, #cbd5e1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* CSS For SubTitle service */
-/* Start Here */
-/* subtitle container and the glowing highlight keyframe animation */
-.subtitles-container {
-  width: 100%;
-  min-height: 120px;
+.price-container {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 0 40px;
-  text-align: center;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(8px);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: 20px;
+  gap: 14px;
 }
 
-.subtitles {
-  font-size: 46px;
-  font-weight: 900;
-  line-height: 1.4;
-  color: #64748b; /* Dim default color for unread words */
-  text-transform: uppercase;
+.price-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-muted);
   letter-spacing: 1px;
 }
 
-.word {
+.price {
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--gold-yellow);
   display: inline-block;
-  margin: 0 8px;
-  animation-name: karaokeHighlight;
-  animation-timing-function: ease-in-out;
-  animation-fill-mode: forwards;
 }
 
-@keyframes karaokeHighlight {
-  0% {
-    color: #64748b;
-    transform: scale(1);
-    text-shadow: none;
-  }
-  50% {
-    color: #facc15; /* Vibrant gold/yellow highlight */
-    transform: scale(1.12);
-    text-shadow: 0 0 25px rgba(250, 204, 21, 0.7);
-  }
-  100% {
-    color: #f8fafc; /* Stay bright white after being spoken */
-    transform: scale(1);
-    text-shadow: 0 0 10px rgba(248, 250, 252, 0.3);
-  }
+/* Burned-In Karaoke Subtitles Styling */
+.subtitles-container {
+  width: 100%;
+  min-height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
 }
-/* Ends Here */
+
+.subtitles {
+  font-size: 32px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.4;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.subtitles span.highlight,
+.subtitles mark,
+.subtitles .word-active {
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.2);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-cyan);
+}
+
+/* CTA Button */
+.cta {
+  background: linear-gradient(135deg, var(--accent-indigo) 0%, #4f46e5 100%);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 800;
+  padding: 18px 44px;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ASPECT RATIO OVERRIDES */
+
+/* Vertical 9:16 (1080x1920) Layout */
+body.ratio-9-16,
+body.ratio-9-16 .reel-container {
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 60px 40px;
+}
+
+body.ratio-9-16 .img-card {
+  width: 85%;
+  height: 48%;
+}
+
+body.ratio-9-16 .title {
+  font-size: 40px;
+}
+
+body.ratio-9-16 .price {
+  font-size: 56px;
+}
+
+body.ratio-9-16 .subtitles {
+  font-size: 36px;
+}
+
+/* Square 1:1 (1080x1080) Layout */
+body.ratio-1-1,
+body.ratio-1-1 .reel-container {
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 30px;
+}
+
+body.ratio-1-1 .header-banner {
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+body.ratio-1-1 .badge {
+  font-size: 20px;
+  padding: 10px 20px;
+}
+
+body.ratio-1-1 .countdown-timer {
+  font-size: 18px;
+  padding: 6px 14px;
+}
+
+body.ratio-1-1 .img-card {
+  width: 70%;
+  height: 40%;
+}
+
+body.ratio-1-1 .title {
+  font-size: 28px;
+}
+
+body.ratio-1-1 .price {
+  font-size: 42px;
+}
+
+body.ratio-1-1 .subtitles {
+  font-size: 26px;
+}
+
+body.ratio-1-1 .cta {
+  font-size: 20px;
+  padding: 12px 32px;
+}
+
+/* Landscape 16:9 (1920x1080) Layout */
+body.ratio-16-9,
+body.ratio-16-9 .reel-container {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px 60px;
+}
+
+body.ratio-16-9 .header-banner {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+body.ratio-16-9 .img-card {
+  width: 45%;
+  height: 65%;
+}
+
+body.ratio-16-9 .details-card {
+  width: 48%;
+  align-items: flex-start;
+  text-align: left;
+}
+
+body.ratio-16-9 .title {
+  font-size: 34px;
+}
+
+body.ratio-16-9 .price {
+  font-size: 50px;
+}
+
+body.ratio-16-9 .subtitles-container {
+  justify-content: flex-start;
+}
+
+body.ratio-16-9 .subtitles {
+  font-size: 28px;
+  text-align: left;
+}
+
+body.ratio-16-9 .cta {
+  width: 100%;
+  text-align: center;
+  margin-top: 15px;
+  font-size: 22px;
+  padding: 14px;
+}

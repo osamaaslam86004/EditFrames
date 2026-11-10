@@ -2,29 +2,63 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flash Sale Reel</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/flash_sale_reel.css') }}"
-    />
+    <link rel="stylesheet" href="static/css/flash_sale_reel.css" />
+    <link rel="stylesheet" href="css/flash_sale_reel.css" />
+    <link rel="stylesheet" href="/dashboard/css/flash_sale_reel.css" />
   </head>
-  <body>
-    <div class="badge">⚡ WEEKLY FLASH SALE</div>
-
-    <div class="img-card">
-      <img src="{{IMAGE_URL}}" alt="Product" />
-    </div>
-
-    <div class="details">
-      <div class="title">{{PRODUCT_TITLE}}</div>
-      <div class="price">${{PRICE}}</div>
-
-      <!-- Burned-In Karaoke Subtitles Container -->
-      <div class="subtitles-container">
-        <div class="subtitles">{{SUBTITLES_HTML}}</div>
+  <body class="{{ASPECT_RATIO_CLASS}}">
+    <div class="reel-container {{ASPECT_RATIO_CLASS}}">
+      <!-- Flash Sale Badge & Countdown Header -->
+      <div class="header-banner">
+        <div class="badge pulse-glow">⚡ WEEKLY FLASH SALE</div>
+        <div class="countdown-timer" id="countdownTimer">00:14:59 LEFT</div>
       </div>
+
+      <!-- Animated Product Image Card -->
+      <div class="img-card zoom-in">
+        <img src="{{IMAGE_URL}}" alt="Product Image" />
+      </div>
+
+      <!-- Product Details & Subtitles Container -->
+      <div class="details-card">
+        <div class="title-container">
+          <h1 class="title">{{PRODUCT_TITLE}}</h1>
+        </div>
+        <div class="price-container">
+          <span class="price-label">NOW ONLY</span>
+          <span class="price pulse-glow">${{PRICE}}</span>
+        </div>
+
+        <!-- Burned-In Karaoke Subtitles Container -->
+        <div class="subtitles-container">
+          <div class="subtitles">{{SUBTITLES_HTML}}</div>
+        </div>
+      </div>
+
+      <!-- Call to Action Banner -->
+      <div class="cta pulse-glow">SHOP NOW — LINK IN BIO 🛍️</div>
     </div>
 
-    <div class="cta">SHOP NOW — LINK IN BIO 🛍️</div>
+    <!-- Live Countdown Timer Script -->
+    <script>
+      (function () {
+        let secondsLeft = 899;
+        const timerEl = document.getElementById("countdownTimer");
+        if (!timerEl) return;
+        setInterval(() => {
+          if (secondsLeft <= 0) return;
+          secondsLeft--;
+          const hrs = String(Math.floor(secondsLeft / 3600)).padStart(2, "0");
+          const mins = String(Math.floor((secondsLeft % 3600) / 60)).padStart(
+            2,
+            "0",
+          );
+          const secs = String(secondsLeft % 60).padStart(2, "0");
+          timerEl.textContent = `${hrs}:${mins}:${secs} LEFT`;
+        }, 1000);
+      })();
+    </script>
   </body>
 </html>
