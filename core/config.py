@@ -2,17 +2,17 @@ import os
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from pydantic import (
+    AliasChoices,
     BaseModel,
+    Field,
     PostgresDsn,
     RedisDsn,
-    HttpUrl,
     SecretStr,
-    Field,
     field_validator,
     model_validator,
 )
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 # 1. Define Sub-Configs using standard BaseModel
@@ -21,11 +21,18 @@ class AppConfig(BaseModel):
     description: str = (
         "Multi-tenant scheduling backend for video generation and processing"
     )
-    environment: Literal["development", "test", "staging", "production"] = "development"
+    environment: Literal["development", "test", "staging", "production"] = Field(
+        default="development",
+        validation_alias=AliasChoices("environment", "env"),
+    )
     debug: bool = False
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
     dashboard_url: str = "http://localhost:8000/dashboard"
+    api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("api_key", "app_api_key"),
+    )
 
     @model_validator(mode="after")
     def enforce_production_secrets(self):
@@ -36,11 +43,17 @@ class AppConfig(BaseModel):
 
 # Security Configurations
 class SecurityConfig(BaseModel):
-    # secret_key: str
-    # session_secret: str
-    # algorithm: str = "HS256"
-    api_key: SecretStr | None = (None,)
-    front_end_url: HttpUrl = Field(default="http://localhost:3000")
+    # Encryption / Decryption Master Key
+    app_master_key: SecretStr | None = None
+    session_secret: SecretStr | None = None
+    api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("api_key", "security_api_key"),
+    )
+    front_end_url: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("front_end_url", "frontend_url"),
+    )
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
     allow_credentials: bool = True
     allow_methods: list[str] = Field(default_factory=lambda: ["*"])
@@ -64,11 +77,13 @@ class DatabaseConfig(BaseModel):
 
 # Redis Configurations
 class RedisConfig(BaseModel):
-    base_url: RedisDsn = Field(alias="url")
+    base_url: RedisDsn = Field(
+        validation_alias=AliasChoices("url", "base_url"),
+    )
     sync_db: int = 0
     async_db: int = 1
-    socket_connect_timeout: int = (15,)
-    socket_timeout: int = (5,)
+    socket_connect_timeout: int = 15
+    socket_timeout: int = 5
     dlq_key: str = Field(
         default="calendar_tasks:dead_letter",
         description="Key used for pushing dead letter queue payloads",
@@ -141,10 +156,10 @@ class LLMModelProviderConfig(BaseModel):
 
 class Settings(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
-    security: SecurityConfig
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
     db: DatabaseConfig
     redis: RedisConfig
-    celery: CeleryConfig
+    celery: CeleryConfig = Field(default_factory=CeleryConfig)
     llm: LLMModelProviderConfig
 
     model_config = SettingsConfigDict(

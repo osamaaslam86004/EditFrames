@@ -1,10 +1,9 @@
-import uuid
 import asyncio
-import httpx
 import logging
+import uuid
 
+import httpx
 from playwright.async_api import async_playwright
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -15,9 +14,9 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from core.config import get_settings
-from workers.celery_app import celery_app
-from services.video_service import cleanup_old_videos, render_product_video
 from db.models.videos_model import VideoJob
+from services.video_service import cleanup_old_videos, render_product_video
+from workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -91,17 +90,31 @@ async def run_pipeline(payload: dict | None = None):
 
             if payload:
                 # Render custom single video from dashboard payload
-                print("Processing custom generation request from dashboard...")
+                product_title = payload.get("product_title", "Untitled Product")
+                price = payload.get("price", 0.0)
+                image_url = payload.get("image_url", "")
+                voice_persona = payload.get("voice_persona", "af_bella")
+                aspect_ratio = payload.get("aspect_ratio", "9:16")
+                use_llm_script = payload.get("use_llm_script", True)
+                category = payload.get("category", "electronics")
+
+                logger.info(
+                    "Processing custom generation request from dashboard: title='%s', price=%s, aspect_ratio=%s, voice_persona=%s",
+                    product_title,
+                    price,
+                    aspect_ratio,
+                    voice_persona,
+                )
+
                 product = {
                     "id": f"custom_{uuid.uuid4().hex[:8]}",
-                    "title": payload.get("product_title"),
-                    "price": payload.get("price"),
-                    "image": payload.get("image_url"),
-                    "category": "electronics",
-                    "voice_persona": payload.get("voice_persona", "af_bella"),
+                    "title": product_title,
+                    "price": price,
+                    "image": image_url,
+                    "category": category,
+                    "voice_persona": voice_persona,
+                    "use_llm_script": use_llm_script,
                 }
-
-                aspect_ratio = payload.get("aspect_ratio", "9:16")
 
                 # 1. Create DB job entry
                 job_id = await create_job_record(sessionmaker, product["title"])
@@ -120,8 +133,18 @@ async def run_pipeline(payload: dict | None = None):
                     await update_job_status(
                         sessionmaker, job_id, "completed", output_url=output_url
                     )
+                    logger.info(
+                        "Custom video generation job %s completed successfully: %s",
+                        job_id,
+                        output_url,
+                    )
 
                 except Exception as inner_exc:
+                    logger.error(
+                        "Custom video generation job %s failed: %s",
+                        job_id,
+                        str(inner_exc),
+                    )
                     # Mark job as failed with error message
                     await update_job_status(
                         sessionmaker, job_id, "failed", error_message=str(inner_exc)
@@ -129,18 +152,19 @@ async def run_pipeline(payload: dict | None = None):
                     raise inner_exc
 
             else:
-
                 # Fallback batch cron job behavior
-                print("Cleaning up old promo videos...")
+                logger.info(
+                    "No custom payload provided. Executing batch FakeStore run..."
+                )
+                logger.info("Cleaning up old promo videos...")
                 cleanup_old_videos()
 
-                print("Fetching product payload from FakeStore API...")
+                logger.info("Fetching product payload from FakeStore API...")
                 with httpx.Client() as client:
                     response = client.get("https://fakestoreapi.com/products?limit=3")
                     products = response.json()
 
                 for idx, product in enumerate(products, 1):
-
                     job_id = await create_job_record(sessionmaker, product["title"])
 
                     await update_job_status(sessionmaker, job_id, "processing")
@@ -159,8 +183,17 @@ async def run_pipeline(payload: dict | None = None):
                         await update_job_status(
                             sessionmaker, job_id, "completed", output_url=output_url
                         )
+                        logger.info(
+                            "Batch video %s/%s completed: %s",
+                            idx,
+                            len(products),
+                            output_url,
+                        )
 
                     except Exception as inner_exc:
+                        logger.error(
+                            "Batch video job %s failed: %s", job_id, str(inner_exc)
+                        )
                         await update_job_status(
                             sessionmaker, job_id, "failed", error_message=str(inner_exc)
                         )
@@ -184,10 +217,14 @@ async def run_pipeline(payload: dict | None = None):
 def generate_weekly_videos_task(self, payload: dict | None = None):
     try:
         # Run the async pipeline inside the sync Celery worker
+        logger.info(
+            "Executing generate_weekly_videos_task with payload: %s",
+            "custom" if payload else "batch",
+        )
         asyncio.run(run_pipeline(payload))
-        print("Video generation completed successfully via Celery!")
+        logger.info("Video generation completed successfully via Celery!")
         return {"status": "success"}
 
     except Exception as exc:
-        print(f"PIPELINE ERROR: {str(exc)}")
+        logger.error("PIPELINE ERROR: %s", str(exc), exc_info=True)
         raise self.retry(exc=exc, countdown=60)
