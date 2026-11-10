@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from huggingface_hub import login, snapshot_download
 
 from core.config import get_settings
+from core.websocket import manager
 
 try:
     from kokoro import KPipeline
@@ -43,5 +44,17 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Kokoro package not installed. Skipping model pre-loading.")
 
+    # Start Redis Pub/Sub backplane telemetry listener
+    try:
+        await manager.start()
+    except Exception as exc:
+        logger.warning("Could not start telemetry backplane: %s", exc)
+
     yield
+
+    # Clean up backplane listener and models
+    try:
+        await manager.stop()
+    except Exception as exc:
+        logger.warning("Error stopping telemetry backplane: %s", exc)
     models.clear()
